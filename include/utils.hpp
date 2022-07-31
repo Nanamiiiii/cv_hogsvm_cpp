@@ -2,6 +2,9 @@
  * utils.hpp
  */
 
+#ifndef _UTILS_HPP_
+#define _UTILS_HPP_
+
 #include <iostream>
 #include <vector>
 #include <filesystem>
@@ -20,5 +23,7 @@ namespace Utils {
     };
 
     void output_log(loglevel level, std::string str);
-    std::vector<std::string> get_files(std::string path_str);
+    std::vector<std::string> get_files(const std::string &path_str);
 }
+
+#endif

@@ -31,13 +31,15 @@ namespace Utils {
         }
     }
 
-    std::vector<std::string> get_files(std::string path_str) {
+    std::vector<std::string> get_files(const std::string &path_str) {
         using namespace std::filesystem;
         std::vector<std::string> files;
         path target_dir(path_str);
 
+        Utils::output_log(Utils::DEBUG, "search directory: " + path_str);
+
         if (!is_directory(target_dir)) {
-            output_log(ERR, "specified path is not directory");
+            output_log(ERR, "specified path is not directory: " + path_str);
             return files;
         }
 
@@ -46,6 +48,7 @@ namespace Utils {
             output_log(DEBUG, "found: " + filename);
             files.push_back(filename);
         }
+        output_log(INFO, std::to_string(files.size()) + " file(s) found in " + path_str);
         return files;
     }
 }
