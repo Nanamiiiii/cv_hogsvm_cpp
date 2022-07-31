@@ -7,14 +7,8 @@ add_definitions(-DRESOURCE_DIR="${PROJECT_BINARY_DIR}/resource/")
 
 # Create Main project
 file(GLOB SOURCES src/*.cpp)
-
-file(GLOB HEADERS include/*.hpp)
-
-add_executable(Main
-    ${SOURCES}
-    ${HEADERS}
-)
-
+add_executable(Main ${SOURCES})
+target_include_directories(Main PUBLIC include)
 
 # For OpenCV
 find_package(OpenCV REQUIRED)
