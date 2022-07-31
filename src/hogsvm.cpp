@@ -215,4 +215,12 @@ namespace HogSvm {
         Utils::output_log(Utils::INFO, "finished");
         Utils::output_log(Utils::INFO, "results saved into " + result_dir);
     }
+
+    void train(std::string positive_dir, std::string negative_dir, std::string svm_file, std::string detector_file) {
+        Mat trainset;
+        std::vector<int> labels;
+        create_trainset(positive_dir, negative_dir, trainset, labels);
+        svm_train(trainset, labels, svm_file);
+        create_hogdetector(svm_file, detector_file);
+    }
 }

@@ -51,4 +51,5 @@ namespace Utils {
         output_log(INFO, std::to_string(files.size()) + " file(s) found in " + path_str);
         return files;
     }
+
 }

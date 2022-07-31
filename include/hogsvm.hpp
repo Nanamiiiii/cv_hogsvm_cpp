@@ -23,6 +23,7 @@ namespace HogSvm {
     std::vector<float> svm2detector(Ptr<ml::SVM> &svm);
     void create_hogdetector(std::string svm_file, std::string detector_file);
     void detect_multiscale(std::string target_dir, std::string detector_file, std::string result_dir);
+    void train(std::string positive_dir, std::string negative_dir, std::string svm_file, std::string detector_file);
 }
 
 #endif

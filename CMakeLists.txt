@@ -10,6 +10,9 @@ file(GLOB SOURCES src/*.cpp)
 add_executable(Main ${SOURCES})
 target_include_directories(Main PUBLIC include)
 
+# Boost
+target_include_directories(Main PUBLIC $ENV{BOOST_INCLUDE_DIR})
+
 # For OpenCV
 find_package(OpenCV REQUIRED)
 if(OpenCV_FOUND)
