@@ -12,10 +12,10 @@ namespace HogSvm {
         Utils::output_log(Utils::INFO, "compute HoGs: " + path);
 
         /* Variables */
-        Size window_sz      = Size(64, 64);
+        Size window_sz      = Size(128, 128);
         Size block_sz       = Size(16, 16);
-        Size block_str      = Size(4, 4);
-        Size cell_sz        = Size(4, 4);
+        Size block_str      = Size(8, 8);
+        Size cell_sz        = Size(8, 8);
         int nbins           = 9;
 
         vector<float> descriptors;
@@ -39,7 +39,7 @@ namespace HogSvm {
 
             /* Downscale 64x64 */
             Mat downscale;
-            resize(grayscale, downscale, Size(64, 64));
+            resize(grayscale, downscale, Size(128, 128));
             
             /* Create HOGDescriptor */
             HOGDescriptor hog = HOGDescriptor(
@@ -88,7 +88,7 @@ namespace HogSvm {
         Utils::output_log(Utils::INFO, "compute HoGs of positive images");
 
         compute_hog(positive_dir, hogs);
-        int positive_n = hogs.size();
+        int positive_n = (int)hogs.size();
         labels.assign(positive_n, 1);
 
         Utils::output_log(Utils::INFO, "positive count: " + std::to_string(positive_n));
@@ -97,7 +97,7 @@ namespace HogSvm {
         Utils::output_log(Utils::INFO, "compute HoGs of negative images");
 
         compute_hog(negative_dir, hogs);
-        int negative_n = hogs.size() - positive_n; 
+        int negative_n = (int)hogs.size() - positive_n; 
         labels.insert(labels.end(), negative_n, -1);
 
         Utils::output_log(Utils::INFO, "negative count: " + std::to_string(negative_n));
@@ -113,11 +113,15 @@ namespace HogSvm {
 
         /* Configure SVM instance */
         Ptr<SVM> svm = SVM::create();
-        svm->setType(SVM::C_SVC);
+        svm->setType(SVM::EPS_SVR);
         svm->setKernel(SVM::LINEAR);
-        svm->setGamma(1.0);
+        svm->setCoef0(0.0);
+        svm->setDegree(3);
+        svm->setGamma(0);
         svm->setC(1.0);
-        svm->setTermCriteria(TermCriteria(TermCriteria::COUNT, 100, 1e-6));
+        svm->setNu(0.5);
+        svm->setP(0.1);
+        svm->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 1000, 1e-3));
 
         Utils::output_log(Utils::INFO, "instance configured");
         Utils::output_log(Utils::INFO, "starting train");
@@ -161,7 +165,14 @@ namespace HogSvm {
         Utils::output_log(Utils::INFO, "SVM loaded from " + svm_file);
 
         HOGDescriptor hog;
-        hog.winSize = Size(64, 64);
+        Size window_sz      = Size(128, 128);
+        Size block_sz       = Size(16, 16);
+        Size block_str      = Size(8, 8);
+        Size cell_sz        = Size(8, 8);
+        hog.winSize     = window_sz;
+        hog.blockSize   = block_sz;
+        hog.blockStride = block_str;
+        hog.cellSize    = cell_sz;
         hog.setSVMDetector(svm2detector(svm));
         hog.save(detector_file);
 
@@ -208,9 +219,10 @@ namespace HogSvm {
                 Scalar color = Scalar(0., found_weights[i] * found_weights[i] * 200.0, 0.);
                 rectangle(img, detections[i], color, img.cols / 400 + 1);
             }
-            std::string outimg = result_dir + "res_" + std::to_string(idx) + ".png";
+            std::string outimg = result_dir + "/res_" + std::to_string(idx) + ".png";
             imwrite(outimg, img);
             Utils::output_log(Utils::DEBUG, "image saved: " + outimg);
+            idx++;
         }
         Utils::output_log(Utils::INFO, "finished");
         Utils::output_log(Utils::INFO, "results saved into " + result_dir);

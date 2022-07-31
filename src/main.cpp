@@ -19,8 +19,8 @@ int main(const int argc, const char* const * const argv) {
         ("result,r", value<std::string>()->default_value("resource/result"), "result saving dir")
         ("svm", value<std::string>()->default_value("resource/svm_traindata.xml"), "filepath to SVM XML")
         ("detector", value<std::string>()->default_value("resource/hog_detector.yml"), "filepath to HoG Detector file")
-        ("no-train", bool_switch(), "skip flag for train")
-        ("no-detection", bool_switch(), "skip flag for detection")
+        ("no-train", bool_switch()->default_value(false), "skip flag for train")
+        ("no-detection", bool_switch()->default_value(false), "skip flag for detection")
     ;
 
     /* Analyze commandline options */
@@ -45,8 +45,8 @@ int main(const int argc, const char* const * const argv) {
     std::string svm_file = vm["svm"].as<std::string>();
     std::string detector_file = vm["detector"].as<std::string>();
 
-    bool no_train = vm.count("no-train");
-    bool no_detection = vm.count("no-detection");
+    bool no_train = vm["no-train"].as<bool>();
+    bool no_detection = vm["no-detection"].as<bool>();
 
     /* Information */
     Utils::output_log(Utils::INFO, "Positive images: " + positive_dir);
@@ -55,8 +55,6 @@ int main(const int argc, const char* const * const argv) {
     Utils::output_log(Utils::INFO, "Result store: " + result_dir);
     Utils::output_log(Utils::INFO, "SVM file: " + svm_file);
     Utils::output_log(Utils::INFO, "Detector file: " + detector_file);
-    Utils::output_log(Utils::INFO, "Train process: " + no_train ? "false" : "true");
-    Utils::output_log(Utils::INFO, "Detection process: " + no_detection ? "false" : "true");
 
     /* Train process */
     if (!no_train) {

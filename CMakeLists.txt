@@ -12,6 +12,7 @@ target_include_directories(Main PUBLIC include)
 
 # Boost
 target_include_directories(Main PUBLIC $ENV{BOOST_INCLUDE_DIR})
+target_link_directories(Main PUBLIC $ENV{BOOST_LINK_DIR})
 
 # For OpenCV
 find_package(OpenCV REQUIRED)
