@@ -9,7 +9,8 @@ using namespace cv;
 namespace HogSvm {
     void compute_hog(const std::string &path, std::vector<Mat> &hogs) {
         using namespace std;
-        Utils::output_log(Utils::INFO, "compute HoGs: " + path);
+        Utils::Logger logger = Utils::Logger();
+        logger.info("compute HoGs: " + path);
 
         /* Variables */
         Size window_sz      = Size(128, 128);
@@ -24,14 +25,14 @@ namespace HogSvm {
         vector<string> files = Utils::get_files(path);
 
         if (files.size() == 0) {
-            Utils::output_log(Utils::ERR, "failed to get image files. aborting.");
+            logger.error("failed to get image files. aborting.");
             exit(1);
         }
 
         for (string file : files) {
             /* Load images */
             Mat img = imread(file, IMREAD_COLOR);
-            Utils::output_log(Utils::DEBUG, "loaded: " + file);
+            logger.debug("loaded: " + file);
 
             /* Gray scale */
             Mat grayscale;
@@ -55,17 +56,18 @@ namespace HogSvm {
             hogs.push_back(Mat(descriptors).clone());
         }
 
-        Utils::output_log(Utils::INFO, "computed HoGs of " + std::to_string(files.size()) + " image(s)");
+        logger.info("computed HoGs of " + std::to_string(files.size()) + " image(s)");
     }
 
     void hogs2mat(const std::vector<Mat> &hogs, Mat &train_data) {
         /* Variables */
+        Utils::Logger logger = Utils::Logger();
         const int rows = (int) hogs.size();
         const int cols = (int) std::max(hogs[0].cols, hogs[0].rows);
         Mat tmp(1, cols, CV_32FC1);
         train_data = Mat(rows, cols, CV_32FC1);
 
-        Utils::output_log(Utils::INFO, "convert HoGs to training data");
+        logger.info("convert HoGs to training data");
 
         /* Convert to single Mat */
         for (size_t i = 0; i < hogs.size(); i++) {
@@ -80,28 +82,29 @@ namespace HogSvm {
     }
 
     void create_trainset(std::string positive_dir, std::string negative_dir, Mat &trainset, std::vector<int> &labels) {
+        Utils::Logger logger = Utils::Logger();
         std::vector<Mat> hogs;
 
-        Utils::output_log(Utils::INFO, "create trainset");
+        logger.info("create trainset");
         
         /* compute HOGs of positive images */
-        Utils::output_log(Utils::INFO, "compute HoGs of positive images");
+        logger.info("compute HoGs of positive images");
 
         compute_hog(positive_dir, hogs);
         int positive_n = (int)hogs.size();
         labels.assign(positive_n, 1);
 
-        Utils::output_log(Utils::INFO, "positive count: " + std::to_string(positive_n));
+        logger.info("positive count: " + std::to_string(positive_n));
 
         /* compute HoGs of negative images */
-        Utils::output_log(Utils::INFO, "compute HoGs of negative images");
+        logger.info("compute HoGs of negative images");
 
         compute_hog(negative_dir, hogs);
         int negative_n = (int)hogs.size() - positive_n; 
         labels.insert(labels.end(), negative_n, -1);
 
-        Utils::output_log(Utils::INFO, "negative count: " + std::to_string(negative_n));
-        Utils::output_log(Utils::INFO, "total count: " + std::to_string(hogs.size()));
+        logger.info("negative count: " + std::to_string(negative_n));
+        logger.info("total count: " + std::to_string(hogs.size()));
 
         /* convert trainset */
         hogs2mat(hogs, trainset);
@@ -109,7 +112,8 @@ namespace HogSvm {
 
     void svm_train(Mat &trainset, std::vector<int> &labels, std::string svm_filename) {
         using namespace cv::ml;
-        Utils::output_log(Utils::INFO, "proceeding SVM train");
+        Utils::Logger logger = Utils::Logger();
+        logger.info("proceeding SVM train");
 
         /* Configure SVM instance */
         Ptr<SVM> svm = SVM::create();
@@ -123,18 +127,19 @@ namespace HogSvm {
         svm->setP(0.1);
         svm->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 1000, 1e-3));
 
-        Utils::output_log(Utils::INFO, "instance configured");
-        Utils::output_log(Utils::INFO, "starting train");
+        logger.info("instance configured");
+        logger.info("starting train");
 
         /* Train */
         svm->train(trainset, ROW_SAMPLE, labels);
         svm->save(svm_filename);
 
-        Utils::output_log(Utils::INFO, "complete. file saved as " + svm_filename);
+        logger.info("complete. file saved as " + svm_filename);
     }
 
     std::vector<float> svm2detector(Ptr<ml::SVM> &svm) {
-        Utils::output_log(Utils::INFO, "extract detector from SVM");
+        Utils::Logger logger = Utils::Logger();
+        logger.info("extract detector from SVM");
 
         /* Export support vector */
         Mat sv = svm->getSupportVectors();
@@ -158,11 +163,12 @@ namespace HogSvm {
 
     void create_hogdetector(std::string svm_file, std::string detector_file) {
         using namespace cv::ml;
-        Utils::output_log(Utils::INFO, "creating HoG detector from SVM");
+        Utils::Logger logger = Utils::Logger();
+        logger.info("creating HoG detector from SVM");
 
         /* Load SVM from XML */
         Ptr<SVM> svm = SVM::load(svm_file);
-        Utils::output_log(Utils::INFO, "SVM loaded from " + svm_file);
+        logger.info("SVM loaded from " + svm_file);
 
         HOGDescriptor hog;
         Size window_sz      = Size(128, 128);
@@ -176,34 +182,35 @@ namespace HogSvm {
         hog.setSVMDetector(svm2detector(svm));
         hog.save(detector_file);
 
-        Utils::output_log(Utils::INFO, "detector saved as " + detector_file);
+        logger.info("detector saved as " + detector_file);
     }
     
     void detect_multiscale(std::string target_dir, std::string detector_file, std::string result_dir) {
-        Utils::output_log(Utils::INFO, "[Start detection: Multiscale]");
-        Utils::output_log(Utils::INFO, "\ttarget: " + target_dir);
-        Utils::output_log(Utils::INFO, "\tdetector file: " + detector_file);
-        Utils::output_log(Utils::INFO, "\tresults saved to " + result_dir);
+        Utils::Logger logger = Utils::Logger();
+        logger.info("[Start detection: Multiscale]");
+        logger.info("\ttarget: " + target_dir);
+        logger.info("\tdetector file: " + detector_file);
+        logger.info("\tresults saved to " + result_dir);
 
         /* Load detector */
         HOGDescriptor hog;
         hog.load(detector_file);
-        Utils::output_log(Utils::DEBUG, "detector loaded");
+        logger.info("detector loaded");
 
         /* Retrive detection targets */
         std::vector<std::string> files = Utils::get_files(target_dir);
         if (files.size() == 0) {
-            Utils::output_log(Utils::ERR, "failed to get image files. aborting.");
+            logger.error("failed to get image files. aborting.");
             exit(1);
         }
 
         /* Proceed detection */
-        Utils::output_log(Utils::INFO, std::to_string(files.size()) + "file(s) in detection process");
-        Utils::output_log(Utils::INFO, "proceeding...");
+        logger.info(std::to_string(files.size()) + "file(s) in detection process");
+        logger.info("proceeding...");
         int idx = 0;
         for (std::string file : files) {
             Mat img = imread(file, IMREAD_COLOR);
-            Utils::output_log(Utils::DEBUG, "loaded: " + file);
+            logger.debug("loaded: " + file);
 
             std::vector<Rect> detections;
             std::vector<double> found_weights;
@@ -212,7 +219,7 @@ namespace HogSvm {
                 detections,
                 found_weights
             );
-            Utils::output_log(Utils::DEBUG, std::to_string(detections.size()) + " object(s) detected");
+            logger.debug(std::to_string(detections.size()) + " object(s) detected");
 
             /* Create & save result */
             for (size_t i = 0; i < detections.size(); i++) {
@@ -221,11 +228,11 @@ namespace HogSvm {
             }
             std::string outimg = result_dir + "/res_" + std::to_string(idx) + ".png";
             imwrite(outimg, img);
-            Utils::output_log(Utils::DEBUG, "image saved: " + outimg);
+            logger.debug("image saved: " + outimg);
             idx++;
         }
-        Utils::output_log(Utils::INFO, "finished");
-        Utils::output_log(Utils::INFO, "results saved into " + result_dir);
+        logger.info("finished");
+        logger.info("results saved into " + result_dir);
     }
 
     void train(std::string positive_dir, std::string negative_dir, std::string svm_file, std::string detector_file) {

@@ -11,14 +11,20 @@ add_executable(Main ${SOURCES})
 target_include_directories(Main PUBLIC include)
 
 # Boost
-target_include_directories(Main PUBLIC $ENV{BOOST_INCLUDE_DIR})
-target_link_directories(Main PUBLIC $ENV{BOOST_LINK_DIR})
+find_package(Boost REQUIRED COMPONENTS program_options)
+if(Boost_FOUND)
+    target_include_directories(Main PUBLIC ${Boost_INCLUDE_DIRS})
+    target_link_libraries(Main Boost::program_options)
+    message("Boost include: ${Boost_INCLUDE_DIRS}")
+    message("Boost Libraries: ${Boost_LIBRARIES}")
+endif()
 
 # For OpenCV
 find_package(OpenCV REQUIRED)
 if(OpenCV_FOUND)
     target_include_directories(Main PUBLIC ${OpenCV_INCLUDE_DIRS})
     target_link_libraries(Main ${OpenCV_LIBS})
+    message("OpenCV Libraries: ${OpenCV_LIBS}")
 endif()
 
 set_property(TARGET ${ProjectName} PROPERTY CXX_STANDARD 17)

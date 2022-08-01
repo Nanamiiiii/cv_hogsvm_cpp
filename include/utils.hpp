@@ -9,20 +9,20 @@
 #include <vector>
 #include <filesystem>
 #include <string>
-
-#ifndef LOGLEVEL
-#define LOGLEVEL 0
-#endif
+#include <cstdlib>
 
 namespace Utils {
-    enum loglevel {
-        DEBUG,
-        INFO,
-        WARN,
-        ERR,
-    };
+    class Logger {
+        public:
+        Logger();
+        void debug(std::string str);
+        void info(std::string str);
+        void warn(std::string str);
+        void error(std::string str);
 
-    void output_log(loglevel level, std::string str);
+        private:
+        int loglevel;
+    };
     std::vector<std::string> get_files(const std::string &path_str);
 }
 

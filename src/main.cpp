@@ -8,17 +8,15 @@
 
 int main(const int argc, const char* const * const argv) {
     using namespace boost::program_options;
+    Utils::Logger logger = Utils::Logger();
 
     /* Definition of command-line options */
     options_description description("options");
     description.add_options()
         ("help,h", "produce help msg")
-        ("pos,p", value<std::string>()->default_value("resource/base"), "positive image dir")
-        ("neg,n", value<std::string>()->default_value("resource/negative"), "negative image dir")
-        ("target,t", value<std::string>()->default_value("resource/target"), "detection target dir")
-        ("result,r", value<std::string>()->default_value("resource/result"), "result saving dir")
-        ("svm", value<std::string>()->default_value("resource/svm_traindata.xml"), "filepath to SVM XML")
-        ("detector", value<std::string>()->default_value("resource/hog_detector.yml"), "filepath to HoG Detector file")
+        ("dataset,d", value<std::string>()->default_value("resource/test"), "dataset directory")
+        ("svm", value<std::string>()->default_value("svm_traindata.xml"), "filename to SVM XML")
+        ("detector", value<std::string>()->default_value("hog_detector.yml"), "filename to HoG Detector file")
         ("no-train", bool_switch()->default_value(false), "skip flag for train")
         ("no-detection", bool_switch()->default_value(false), "skip flag for detection")
     ;
@@ -38,23 +36,30 @@ int main(const int argc, const char* const * const argv) {
     }
 
     /* Retrive arguments */
-    std::string positive_dir = vm["pos"].as<std::string>();
-    std::string negative_dir = vm["neg"].as<std::string>();
-    std::string target_dir = vm["target"].as<std::string>();
-    std::string result_dir = vm["result"].as<std::string>();
-    std::string svm_file = vm["svm"].as<std::string>();
-    std::string detector_file = vm["detector"].as<std::string>();
+    std::string dataset_dir = vm["dataset"].as<std::string>();
+    std::string svm_filename = vm["svm"].as<std::string>();
+    std::string detector_filename = vm["detector"].as<std::string>();
 
     bool no_train = vm["no-train"].as<bool>();
     bool no_detection = vm["no-detection"].as<bool>();
 
+    std::string positive_dir = dataset_dir + "/positive";
+    std::string negative_dir = dataset_dir + "/negative";
+    std::string target_dir = dataset_dir + "/target";
+    std::string result_dir = dataset_dir + "/result";
+    std::string svm_file = dataset_dir + "/" + svm_filename;
+    std::string detector_file = dataset_dir + "/" + detector_filename;
+
     /* Information */
-    Utils::output_log(Utils::INFO, "Positive images: " + positive_dir);
-    Utils::output_log(Utils::INFO, "Negative images: " + negative_dir);
-    Utils::output_log(Utils::INFO, "Target images: " + target_dir);
-    Utils::output_log(Utils::INFO, "Result store: " + result_dir);
-    Utils::output_log(Utils::INFO, "SVM file: " + svm_file);
-    Utils::output_log(Utils::INFO, "Detector file: " + detector_file);
+    logger.info("Dataset: " + dataset_dir);
+    logger.debug("Positive images: " + positive_dir);
+    logger.debug("Negative images: " + negative_dir);
+    logger.debug("Target images: " + target_dir);
+    logger.debug("Result store: " + result_dir);
+    logger.info("SVM file: " + svm_file);
+    logger.info("Detector file: " + detector_file);
+    logger.info("Train process: " + no_train ? "false" : "true");
+    logger.info("Detection process: " + no_detection ? "false" : "true");
 
     /* Train process */
     if (!no_train) {
