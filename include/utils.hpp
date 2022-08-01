@@ -21,7 +21,7 @@ namespace Utils {
         void error(std::string str);
 
         private:
-        int loglevel;
+        int loglevel = 1;
     };
     std::vector<std::string> get_files(const std::string &path_str);
 }

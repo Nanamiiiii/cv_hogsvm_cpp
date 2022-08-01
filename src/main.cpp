@@ -58,8 +58,10 @@ int main(const int argc, const char* const * const argv) {
     logger.debug("Result store: " + result_dir);
     logger.info("SVM file: " + svm_file);
     logger.info("Detector file: " + detector_file);
-    logger.info("Train process: " + no_train ? "false" : "true");
-    logger.info("Detection process: " + no_detection ? "false" : "true");
+    std::string no_train_s = no_train ? "false" : "true";
+    std::string no_detection_s = no_detection ? "false" : "true";
+    logger.info("Train process: " + no_train_s);
+    logger.info("Detection process: " + no_detection_s);
 
     /* Train process */
     if (!no_train) {

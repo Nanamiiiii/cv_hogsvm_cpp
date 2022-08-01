@@ -16,17 +16,17 @@ namespace Utils {
     }
 
     void Logger::info(std::string str) {
-        if (this->loglevel >= 1)
+        if (this->loglevel <= 1)
             std::cout << "[INFO]\t" << str << std::endl;
     }
 
     void Logger::warn(std::string str) {
-        if (this->loglevel >= 2)
+        if (this->loglevel <= 2)
             std::cout << "[WARN]\t" << str << std::endl;
     }
 
     void Logger::error(std::string str) {
-        if (this->loglevel == 3)
+        if (this->loglevel <= 3)
             std::cout << "[ERROR]\t" << str << std::endl;
     }
 
