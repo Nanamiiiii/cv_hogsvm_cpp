@@ -31,7 +31,11 @@ namespace Utils {
     }
 
     std::vector<std::string> get_files(const std::string &path_str) {
+#ifdef __APPLE__
+        using namespace std::__fs::filesystem;
+#else
         using namespace std::filesystem;
+#endif
         std::vector<std::string> files;
         path target_dir(path_str);
         Logger logger = Logger();
