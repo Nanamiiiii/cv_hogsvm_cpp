@@ -17,7 +17,7 @@ namespace HogSvm {
         Size block_sz       = Size(16, 16);
         Size block_str      = Size(8, 8);
         Size cell_sz        = Size(8, 8);
-        int nbins           = 9;
+        int nbins           = 32;
 
         vector<float> descriptors;
 
@@ -68,7 +68,7 @@ namespace HogSvm {
         Size block_sz       = Size(16, 16);
         Size block_str      = Size(8, 8);
         Size cell_sz        = Size(8, 8);
-        int nbins           = 9;
+        int nbins           = 32;
 
         /* Get images in directory */
         vector<string> files = Utils::get_files(path);
@@ -319,7 +319,7 @@ namespace HogSvm {
         Size block_sz       = Size(16, 16);
         Size block_str      = Size(8, 8);
         Size cell_sz        = Size(8, 8);
-        int nbins           = 9;
+        int nbins           = 32;
         hog.winSize     = window_sz;
         hog.blockSize   = block_sz;
         hog.blockStride = block_str;
@@ -370,10 +370,10 @@ namespace HogSvm {
             /* Create & save result */
             for (size_t i = 0; i < detections.size(); i++) {
                 logger.debug("\tobject " + std::to_string(i) + " weight: " + std::to_string(found_weights[i]));
-                // if (found_weights[i] * found_weights[i] < 0.1) {
-                //     logger.debug("\t\tlow weight. skipping.");
-                //     continue;
-                // }
+                if (found_weights[i] * found_weights[i] < 0.1) {
+                    logger.debug("\t\tlow weight. skipping.");
+                    continue;
+                }
                 Scalar color = Scalar(0., found_weights[i] * found_weights[i] * 200.0, 0.);
                 rectangle(img, detections[i], color, img.cols / 400 + 1);
             }
