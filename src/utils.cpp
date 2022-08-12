@@ -48,7 +48,12 @@ namespace Utils {
         }
 
         for (const auto &file : directory_iterator(path_str)) {
+            std::string ext = file.path().extension();
             std::string filename = file.path().string();
+            if (ext != ".jpg" && ext != ".JPG" && ext != ".png" && ext != ".PNG") {
+                logger.debug("Not an image file: " + filename);
+                continue;
+            }
             logger.debug("found: " + filename);
             files.push_back(filename);
         }

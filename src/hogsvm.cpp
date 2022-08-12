@@ -38,9 +38,9 @@ namespace HogSvm {
             Mat grayscale;
             cvtColor(img, grayscale, COLOR_BGR2GRAY);
 
-            /* Downscale 64x64 */
+            /* Downscale */
             Mat downscale;
-            resize(grayscale, downscale, Size(128, 128));
+            resize(grayscale, downscale, window_sz);
             
             /* Create HOGDescriptor */
             HOGDescriptor hog = HOGDescriptor(
@@ -56,6 +56,142 @@ namespace HogSvm {
             hogs.push_back(Mat(descriptors).clone());
         }
 
+        logger.info("computed HoGs of " + std::to_string(files.size()) + " image(s)");
+    }
+
+    void compute_hog_self(const std::string path, std::vector<Mat> &hogs) {
+        using namespace std;
+        Utils::Logger logger = Utils::Logger();
+
+        /* Variables */
+        Size window_sz      = Size(128, 128);
+        Size block_sz       = Size(16, 16);
+        Size block_str      = Size(8, 8);
+        Size cell_sz        = Size(8, 8);
+        int nbins           = 9;
+
+        /* Get images in directory */
+        vector<string> files = Utils::get_files(path);
+
+        if (files.size() == 0) {
+            logger.error("failed to get image files. aborting.");
+            exit(1);
+        }
+
+        for (string file : files) {
+            /* Load images */
+            Mat img = imread(file, IMREAD_COLOR);
+
+            /* Gray scale */
+            Mat grayscale;
+            cvtColor(img, grayscale, COLOR_BGR2GRAY);
+
+            /* Downscale */
+            Mat downscale;
+            resize(grayscale, downscale, window_sz);
+
+            /* Get edge image */
+            Mat edge_x, edge_y;
+            Sobel(downscale, edge_x, CV_32F, 1, 0, 1);
+            Sobel(downscale, edge_y, CV_32F, 0, 1, 1);
+
+            /* Calc angle & magnitude of edge gradient */
+            Mat magnitude, angle;
+            cartToPolar(edge_x, edge_y, magnitude, angle);
+
+            /* Quantization */
+            int col = angle.cols;
+            int row = angle.rows;
+            for (int i = 0; i < row; i++) {
+                for(int j = 0; j < col; j++) {
+                    float tmp = angle.at<float>(i, j);
+                    angle.at<float>(i, j) = (float)(nbins * tmp /(2 * M_PI));
+                }
+            }
+
+            /* Calc histgram of each cell */
+            vector<vector<vector<float>>> cell_hist;
+            int cell_n_row = row / cell_sz.height;
+            int cell_n_col = col / cell_sz.width;
+            for (int i0 = 0; i0 < cell_n_row; i0++) {
+                vector<vector<float>> cell_hist_col;
+                for (int j0 = 0; j0 < cell_n_col; j0++) {
+                    vector<float> histgram(nbins, 0);
+                    for (int i1 = 0; i1 < cell_sz.height; i1++) {
+                        for (int j1 = 0; j1 < cell_sz.width; j1++) {
+                            float normalized_ang = angle.at<float>(i0 * cell_sz.height + i1, j0 * cell_sz.width + j1);
+                            int bin = (int)normalized_ang;
+                            float mag = magnitude.at<float>(i0 * cell_sz.height + i1, j0 * cell_sz.width + j1);
+                            histgram[bin] += (1 - (normalized_ang - bin)) * mag;
+                            if (bin == nbins - 1) {
+                                histgram[0] += (normalized_ang - bin) * mag;
+                            } else {
+                                histgram[bin + 1] += (normalized_ang - bin) * mag;
+                            }
+                        }
+                    }
+                    cell_hist_col.push_back(histgram);
+                }
+                CV_Assert(cell_hist_col.size() == cell_n_col);
+                cell_hist.push_back(cell_hist_col);
+            }
+            CV_Assert(cell_hist.size() == cell_n_row);
+
+            /* Normalize histgram by block */
+            int block_str_n_row = row / block_str.height;
+            int block_str_n_col = col / block_str.width;
+            int offset_row = block_sz.height / block_str.height;
+            int offset_col = block_sz.width / block_str.width;
+            int celljmp_row = block_str.height / cell_sz.height;
+            int celljmp_col = block_str.width / cell_sz.width;
+            int in_block_row = block_sz.height / cell_sz.height;
+            int in_block_col = block_sz.width / cell_sz.width;
+            int block_n_row = block_str_n_row - (offset_row - 1);
+            int block_n_col = block_str_n_col - (offset_col - 1);
+            double epsilon = 1.0000000000000000;
+            vector<vector<float>> normalized_vecs; 
+            for (int i0 = 0; i0 < block_n_row; i0++) {
+                for (int j0 = 0; j0 < block_n_col; j0++) {
+                    float sq_sum = .0;
+                    for (int i1 = 0; i1 < in_block_row; i1++) {
+                        for (int j1 = 0; j1 < in_block_col; j1++) {
+                            for (float val : cell_hist[i0 * celljmp_row + i1][j0 * celljmp_col + j1]) {
+                                sq_sum += val * val;
+                            }
+                        }
+                    }
+                    float vec_len = sqrtf(sq_sum + epsilon);
+                    vector<float> normalized_vec;
+                    for (int i1 = 0; i1 < in_block_row; i1++) {
+                        for (int j1 = 0; j1 < in_block_col; j1++) {
+                            for (int k1 = 0; k1 < nbins; k1++) {
+                                float tmp = cell_hist[i0 * celljmp_row + i1][j0 * celljmp_col + j1][k1];
+                                float normalized = tmp / vec_len;
+                                if (normalized > 0.2) {
+                                    normalized = 0.2;
+                                }
+                                normalized_vec.push_back(normalized);
+                            }
+                        }
+                    }
+                    CV_Assert(normalized_vec.size() == in_block_row * in_block_col * nbins);
+                    normalized_vecs.push_back(normalized_vec);
+                }
+            }
+            CV_Assert(block_n_row * block_n_col);
+
+            /* Faltten normalized feature vector */
+            vector<float> flattened_vector;
+            for (vector<float> vec : normalized_vecs) {
+                for (float val : vec) {
+                    flattened_vector.push_back(val);
+                }
+            }
+            CV_Assert(flattened_vector.size() == block_n_row * block_n_row * in_block_row * in_block_col * nbins);
+
+            /* Convert to Mat & store */
+            hogs.push_back(Mat(flattened_vector).clone()); 
+        }
         logger.info("computed HoGs of " + std::to_string(files.size()) + " image(s)");
     }
 
@@ -81,7 +217,7 @@ namespace HogSvm {
         }
     }
 
-    void create_trainset(std::string positive_dir, std::string negative_dir, Mat &trainset, std::vector<int> &labels) {
+    void create_trainset(std::string positive_dir, std::string negative_dir, Mat &trainset, std::vector<int> &labels, bool self) {
         Utils::Logger logger = Utils::Logger();
         std::vector<Mat> hogs;
 
@@ -90,7 +226,11 @@ namespace HogSvm {
         /* compute HOGs of positive images */
         logger.info("compute HoGs of positive images");
 
-        compute_hog(positive_dir, hogs);
+        if (!self) {
+            compute_hog(positive_dir, hogs);
+        } else {
+            compute_hog_self(positive_dir, hogs);
+        }
         int positive_n = (int)hogs.size();
         labels.assign(positive_n, 1);
 
@@ -99,7 +239,11 @@ namespace HogSvm {
         /* compute HoGs of negative images */
         logger.info("compute HoGs of negative images");
 
-        compute_hog(negative_dir, hogs);
+        if (!self) {
+            compute_hog(negative_dir, hogs);
+        } else {
+            compute_hog_self(negative_dir, hogs);
+        }
         int negative_n = (int)hogs.size() - positive_n; 
         labels.insert(labels.end(), negative_n, -1);
 
@@ -175,10 +319,12 @@ namespace HogSvm {
         Size block_sz       = Size(16, 16);
         Size block_str      = Size(8, 8);
         Size cell_sz        = Size(8, 8);
+        int nbins           = 9;
         hog.winSize     = window_sz;
         hog.blockSize   = block_sz;
         hog.blockStride = block_str;
         hog.cellSize    = cell_sz;
+        hog.nbins       = nbins;
         hog.setSVMDetector(svm2detector(svm));
         hog.save(detector_file);
 
@@ -223,6 +369,11 @@ namespace HogSvm {
 
             /* Create & save result */
             for (size_t i = 0; i < detections.size(); i++) {
+                logger.debug("\tobject " + std::to_string(i) + " weight: " + std::to_string(found_weights[i]));
+                // if (found_weights[i] * found_weights[i] < 0.1) {
+                //     logger.debug("\t\tlow weight. skipping.");
+                //     continue;
+                // }
                 Scalar color = Scalar(0., found_weights[i] * found_weights[i] * 200.0, 0.);
                 rectangle(img, detections[i], color, img.cols / 400 + 1);
             }
@@ -235,10 +386,10 @@ namespace HogSvm {
         logger.info("results saved into " + result_dir);
     }
 
-    void train(std::string positive_dir, std::string negative_dir, std::string svm_file, std::string detector_file) {
+    void train(std::string positive_dir, std::string negative_dir, std::string svm_file, std::string detector_file, bool self) {
         Mat trainset;
         std::vector<int> labels;
-        create_trainset(positive_dir, negative_dir, trainset, labels);
+        create_trainset(positive_dir, negative_dir, trainset, labels, self);
         svm_train(trainset, labels, svm_file);
         create_hogdetector(svm_file, detector_file);
     }

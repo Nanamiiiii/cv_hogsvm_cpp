@@ -19,6 +19,7 @@ int main(const int argc, const char* const * const argv) {
         ("detector", value<std::string>()->default_value("hog_detector.yml"), "filename to HoG Detector file")
         ("no-train", bool_switch()->default_value(false), "skip flag for train")
         ("no-detection", bool_switch()->default_value(false), "skip flag for detection")
+        ("self,s", bool_switch()->default_value(false), "use self-impl HoG calculation")
     ;
 
     /* Analyze commandline options */
@@ -42,6 +43,7 @@ int main(const int argc, const char* const * const argv) {
 
     bool no_train = vm["no-train"].as<bool>();
     bool no_detection = vm["no-detection"].as<bool>();
+    bool self_impl = vm["self"].as<bool>();
 
     std::string positive_dir = dataset_dir + "/positive";
     std::string negative_dir = dataset_dir + "/negative";
@@ -60,12 +62,14 @@ int main(const int argc, const char* const * const argv) {
     logger.info("Detector file: " + detector_file);
     std::string no_train_s = no_train ? "false" : "true";
     std::string no_detection_s = no_detection ? "false" : "true";
+    std::string self_impl_s = self_impl ? "self" : "OpenCV"; 
     logger.info("Train process: " + no_train_s);
     logger.info("Detection process: " + no_detection_s);
+    logger.info("HoG calculation: " + self_impl_s);
 
     /* Train process */
     if (!no_train) {
-        HogSvm::train(positive_dir, negative_dir, svm_file, detector_file);
+        HogSvm::train(positive_dir, negative_dir, svm_file, detector_file, self_impl);
     }
 
     /* Detection Process */
