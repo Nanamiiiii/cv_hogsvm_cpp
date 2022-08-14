@@ -148,7 +148,7 @@ namespace HogSvm {
             int in_block_col = block_sz.width / cell_sz.width;
             int block_n_row = block_str_n_row - (offset_row - 1);
             int block_n_col = block_str_n_col - (offset_col - 1);
-            double epsilon = 1.0000000000000000;
+            double epsilon = 1.0000000000000000e-3;
             vector<vector<float>> normalized_vecs; 
             for (int i0 = 0; i0 < block_n_row; i0++) {
                 for (int j0 = 0; j0 < block_n_col; j0++) {
@@ -178,7 +178,7 @@ namespace HogSvm {
                     normalized_vecs.push_back(normalized_vec);
                 }
             }
-            CV_Assert(block_n_row * block_n_col);
+            CV_Assert(normalized_vecs.size() == block_n_row * block_n_col);
 
             /* Faltten normalized feature vector */
             vector<float> flattened_vector;
